@@ -1,0 +1,26 @@
+통표폐색 noloo.org 자동배포 준비본
+
+공개 URL: https://tongpyo.noloo.org
+권장 브랜치: main
+서버에 전달할 path: update.json  (manifest-following / Shape A)
+
+서버 운영자에게 전달할 3개 값
+- repository: <GitHub 저장소 생성 후 owner/name 입력>
+- branch: main
+- path: update.json
+
+중요
+- INTEGRATION.md의 2026-09-09 SNAPSHOT상 통표폐색은 아직 stack/repository wiring이 없음.
+- 따라서 저장소 push만으로는 현재 즉시 배포되지 않음. 서버 운영자가 stack 생성 + repo/branch/path wiring을 해야 함.
+
+GitHub Webhook
+- Payload URL: https://tongpyo.noloo.org/hooks/github
+- Content type: application/json
+- Secret: 통표폐색용 RUNBOOK의 Secret 사용
+- SSL verification: enable
+- Events: Just the push event
+
+확인
+1) Webhook Recent Deliveries의 ping Response = pong — 연결됐습니다.
+2) 실제 push Response = ✓ 또는 =
+3) https://tongpyo.noloo.org 강력 새로고침 후 버전 확인

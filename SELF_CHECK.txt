@@ -1,0 +1,25 @@
+WEB BUILD SELF CHECK
+file: 통표폐색_v2.7.2_원본이식.html
+size_bytes: 761349
+sha256: c86aa83df286958b46e6c49052dd65223172d20eca6bcc3e70352f395ef746b9
+
+R1 single HTML: PASS
+R2 HTML signature: PASS (<!DOCTYPE html>)
+R3 <= 30 MB: PASS
+R5 self-contained static scan: PASS
+- relative src/href: none
+- ./three*.min.js: none
+- AndroidBridgeShim: none
+- file:///android_asset: none
+- fetch(): none
+- dynamic import(): none
+- Worker: none
+
+JavaScript syntax:
+- inline script 1: PASS (node --check)
+- inline script 2: PASS (node --check)
+- inline script 3: PASS (node --check)
+- inline script 4: PASS (node --check)
+
+R4 raw.githubusercontent.com fetch <= 8 s:
+- NOT TESTABLE until repository exists and file is committed there.
