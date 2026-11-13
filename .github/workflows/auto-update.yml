@@ -1,0 +1,92 @@
+name: Auto publish 통표폐색 update
+
+# 포병(FIRE DIRECTION LAB)과 같은 방식:
+#  - 저장소 최상위에 통표폐색_v<판>[_설명].html 을 올린다
+#  - 가장 높은 판으로 update.json 을 갱신한다 (noloo 배포 서버가 이 파일을 따라간다)
+#  - 판 HTML 은 최근 10개만 남긴다
+#  - 내용이 바뀌면 판 번호를 올린다
+
+on: [push, workflow_dispatch]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tongpyo-update
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refresh update.json / keep latest 10
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, re
+
+          root = Path(".")
+          rx = re.compile(r"^통표폐색_v(\d+)\.(\d+)\.(\d+)(?:_[^/]*)?\.html$")
+
+          found = []
+          for p in root.glob("*.html"):
+              m = rx.match(p.name)
+              if m:
+                  found.append((tuple(map(int, m.groups())), p.name, p))
+
+          if not found:
+              print("판 HTML(통표폐색_v*.html)이 최상위에 없어 아무것도 건드리지 않습니다.")
+              raise SystemExit(0)
+
+          found.sort(key=lambda x: (x[0], x[1]))
+          (major, minor, patch), _, game = found[-1]
+          if minor > 99 or patch > 99:
+              raise SystemExit("판 번호 칸이 99를 넘습니다 — build 규칙(2.7.2 → 20702)이 깨집니다.")
+
+          for _, _, old in found[:-10]:
+              print(f"remove {old.name}")
+              old.unlink()
+
+          version = f"{major}.{minor}.{patch}"
+          build = major * 10_000 + minor * 100 + patch   # 기존 규칙: 2.7.2 -> 20702
+
+          prev = {}
+          try:
+              prev = json.loads(Path("update.json").read_text(encoding="utf-8"))
+          except Exception:
+              pass
+          notes = prev.get("notes") if prev.get("version") == version else f"통표폐색 v{version}"
+
+          data = {
+              "version": version,
+              "build": build,
+              "file": game.name,
+              "sha256": hashlib.sha256(game.read_bytes()).hexdigest(),
+              "notes": notes,
+              "mandatory": False,
+          }
+          Path("update.json").write_text(
+              json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+          )
+          print(f"version = {version} · build = {build} · file = {game.name}")
+          PY
+
+      - name: Commit if changed
+        shell: bash
+        run: |
+          git add -A -- update.json '*.html'
+          if git diff --cached --quiet; then
+            echo "already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: publish latest 통표폐색 update"
+          git push
